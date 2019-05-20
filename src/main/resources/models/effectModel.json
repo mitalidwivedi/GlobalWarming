@@ -40,9 +40,9 @@
   "SEA_LEVEL_RISE": {
     "enabled": true,
     "model": {
-      "chunks-per-period": 8,
+      "chunks-per-period": 16,
       "queue-ticks": 65,
-      "chunk-ticks": 35,
+      "chunk-ticks": 20,
       "distribution": {
         "temp": [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
         "fitness": [0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5]

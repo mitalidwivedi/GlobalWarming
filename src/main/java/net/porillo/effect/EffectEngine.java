@@ -8,7 +8,7 @@ import net.porillo.effect.api.ListenerClimateEffect;
 import net.porillo.effect.api.ScheduleClimateEffect;
 import net.porillo.effect.negative.Fire;
 import net.porillo.effect.negative.PermanentSlowness;
-import net.porillo.effect.negative.SeaLevelRise;
+import net.porillo.effect.negative.SeaLevelChange;
 import net.porillo.effect.negative.formation.IceForm;
 import net.porillo.effect.negative.formation.SnowForm;
 import net.porillo.effect.neutral.FarmYield;
@@ -30,7 +30,7 @@ public class EffectEngine {
 	private EffectModel model;
 
 	private EffectEngine() {
-		registerClass(SeaLevelRise.class);
+		registerClass(SeaLevelChange.class);
 		registerClass(MobSpawningRate.class);
 		registerClass(Weather.class);
 		registerClass(FarmYield.class);
@@ -57,8 +57,13 @@ public class EffectEngine {
 				}
 
 				effects.put(entry.getKey(), effect);
-				if (entry.getValue().getAnnotation(ClimateData.class).provideModel()) {
+				ClimateData annotation = entry.getValue().getAnnotation(ClimateData.class);
+				if (annotation.provideModel()) {
 					effect.setJsonModel(data.getAsJsonObject("model"));
+				}
+
+				if (annotation.isSerialized()) {
+					effect.deserialize();
 				}
 
 				if (effect instanceof Listener) {
@@ -68,6 +73,25 @@ public class EffectEngine {
 				if (effect instanceof ScheduleClimateEffect) {
 					ScheduleClimateEffect runnable = (ScheduleClimateEffect) effect;
 					runnable.setTaskId(Bukkit.getScheduler().runTaskTimer(GlobalWarming.getInstance(), runnable, 0, runnable.getPeriod()).getTaskId());
+				}
+			}
+		}
+	}
+
+	public void unloadEffects() {
+		for (Map.Entry<ClimateEffectType, Class<? extends ClimateEffect>> entry : effectClasses.entrySet()) {
+			if (model.isEnabled(entry.getKey())) {
+				ClimateEffect effect;
+				try {
+					effect = entry.getValue().getConstructor().newInstance();
+				} catch (ReflectiveOperationException e) {
+					e.printStackTrace();
+					continue;
+				}
+
+				ClimateData annotation = entry.getValue().getAnnotation(ClimateData.class);
+				if (annotation.isSerialized()) {
+					effect.serialize();
 				}
 			}
 		}

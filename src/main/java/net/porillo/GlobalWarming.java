@@ -114,6 +114,7 @@ public class GlobalWarming extends JavaPlugin {
 	@Override
 	public void onDisable() {
 		AsyncDBQueue.getInstance().close();
+		EffectEngine.getInstance().unloadEffects();
 	}
 
 	private void registerCommands() {

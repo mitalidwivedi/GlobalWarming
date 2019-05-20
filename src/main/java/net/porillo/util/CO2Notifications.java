@@ -8,7 +8,7 @@ import net.porillo.effect.EffectEngine;
 import net.porillo.effect.api.ClimateEffectType;
 import net.porillo.effect.negative.Fire;
 import net.porillo.effect.negative.PermanentSlowness;
-import net.porillo.effect.negative.SeaLevelRise;
+import net.porillo.effect.negative.SeaLevelChange;
 import net.porillo.effect.negative.formation.IceForm;
 import net.porillo.effect.negative.formation.SnowForm;
 import net.porillo.effect.neutral.FarmYield;
@@ -165,8 +165,8 @@ public class CO2Notifications {
                 } else if (worldClimateEngine.isEffectEnabled(ClimateEffectType.SEA_LEVEL_RISE) && random < 0.5) {
                     //Sea-level messages:
                     // Note: sea-level deltas are 0+ (can only rise)
-                    final SeaLevelRise seaLevelRise = EffectEngine.getInstance().getEffect(SeaLevelRise.class, ClimateEffectType.SEA_LEVEL_RISE);
-                    final Distribution distribution = seaLevelRise.getSeaMap();
+                    final SeaLevelChange seaLevelChange = EffectEngine.getInstance().getEffect(SeaLevelChange.class, ClimateEffectType.SEA_LEVEL_RISE);
+                    final Distribution distribution = seaLevelChange.getSeaMap();
                     final int seaLevelDelta = (int) distribution.getValue(temperature);
                     final int normalSeaLevelDelta = (int) distribution.getValue(14.0);
                     message = getMessage(

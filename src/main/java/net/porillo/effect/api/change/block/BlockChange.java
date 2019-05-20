@@ -1,9 +1,13 @@
 package net.porillo.effect.api.change.block;
 
-import lombok.*;
-import net.porillo.effect.api.change.EffectChange;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 import net.porillo.effect.api.change.ChangeType;
+import net.porillo.effect.api.change.EffectChange;
 import org.bukkit.Material;
+import org.bukkit.World;
 
 @Data
 @ToString
@@ -13,6 +17,7 @@ public class BlockChange implements EffectChange {
 
 	private final Material oldType;
 	private final Material newType;
+	private final World world;
 	private final int x,y,z;
 
 	@Override

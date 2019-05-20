@@ -8,4 +8,13 @@ public abstract class ScheduleClimateEffect extends ClimateEffect implements Run
     @Getter @Setter private int period;
     @Getter @Setter private int taskId;
 
+    @Override
+    public void serialize() {
+
+    }
+
+    @Override
+    public void deserialize() {
+
+    }
 }

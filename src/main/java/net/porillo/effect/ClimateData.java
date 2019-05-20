@@ -13,5 +13,5 @@ public @interface ClimateData {
 
     ClimateEffectType type();
     boolean provideModel() default true;
-
+    boolean isSerialized() default false;
 }
