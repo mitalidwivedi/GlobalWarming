@@ -8,7 +8,7 @@ import net.porillo.effect.ClimateData;
 import net.porillo.effect.SeaChange;
 import net.porillo.effect.api.ClimateEffectType;
 import net.porillo.effect.api.ListenerClimateEffect;
-import net.porillo.effect.api.SeaLevel;
+import net.porillo.objects.SeaLevel;
 import net.porillo.effect.api.change.SerializableBlockChange;
 import net.porillo.engine.ClimateEngine;
 import net.porillo.engine.api.Distribution;
@@ -44,8 +44,7 @@ import static org.bukkit.Material.*;
 @ClimateData(type = ClimateEffectType.SEA_LEVEL_RISE, isSerialized = true)
 public class SeaLevelChange extends ListenerClimateEffect {
 
-    @Getter
-    private Distribution seaMap;
+    @Getter private Distribution seaMap;
     private int queueTicks;
     private SeaLevel seaLevel;
 
@@ -101,28 +100,24 @@ public class SeaLevelChange extends ListenerClimateEffect {
                             seaLevel.setCurrentLevel(world.getSeaLevel() - 1);
                         }
 
+                        // Calculate the custom sea level based on the temperature. This is what we want.
                         final int customSeaLevel = getCustomSeaLevel(wce);
                         System.out.println("custom:" + customSeaLevel + " current:" +
                                 seaLevel.getCurrentLevel() + " default:" + seaLevel.getDefaultLevel());
 
+                        // If
                         if (customSeaLevel > seaLevel.getCurrentLevel()) {
                             for (Chunk chunk : world.getLoadedChunks()) {
-                                if (seaLevel.getChunkSeaLevel().containsKey(chunk.hashCode())) {
-                                    Integer level = seaLevel.getChunkSeaLevel().get(chunk.hashCode());
-
-                                    if (level != customSeaLevel) {
-                                        diffBlocks(chunk, SeaChange.UP);
-                                    }
-                                } else {
-                                    diffBlocks(chunk, SeaChange.UP);
-                                }
+                                diffBlocks(chunk, SeaChange.UP);
                             }
+
                             seaLevel.setCurrentLevel(customSeaLevel);
                             seaLevel.setChange(SeaChange.UP);
                         } else if (customSeaLevel < seaLevel.getCurrentLevel()) {
                             for (Chunk chunk : world.getLoadedChunks()) {
                                 diffBlocks(chunk, SeaChange.DOWN);
                             }
+
                             seaLevel.setCurrentLevel(customSeaLevel);
                             seaLevel.setChange(SeaChange.DOWN);
                         } else {

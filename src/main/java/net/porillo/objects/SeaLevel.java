@@ -1,4 +1,4 @@
-package net.porillo.effect.api;
+package net.porillo.objects;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
