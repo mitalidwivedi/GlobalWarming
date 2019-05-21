@@ -83,7 +83,7 @@ public class SeaLevelChange extends ListenerClimateEffect {
     }
 
     /**
-     * Update the queue with loaded-chunks one the queue is empty
+     * Update the queue with loaded-chunks once the queue is empty
      */
     private void startQueueLoader() {
         Bukkit.getServer().getScheduler().scheduleSyncRepeatingTask(GlobalWarming.getInstance(), () -> {
@@ -102,6 +102,7 @@ public class SeaLevelChange extends ListenerClimateEffect {
                         }
 
                         final int customSeaLevel = getCustomSeaLevel(wce);
+                        System.out.println("custom:" + customSeaLevel + " current:" + seaLevel.getCurrentLevel() + " default:" + seaLevel.getDefaultLevel());
 
                         if (customSeaLevel > seaLevel.getCurrentLevel()) {
                             for (Chunk chunk : world.getLoadedChunks()) {
@@ -115,11 +116,13 @@ public class SeaLevelChange extends ListenerClimateEffect {
                                     diffBlocks(chunk, SeaChange.UP);
                                 }
                             }
+                            seaLevel.setCurrentLevel(customSeaLevel);
                             seaLevel.setChange(SeaChange.UP);
                         } else if (customSeaLevel < seaLevel.getCurrentLevel()) {
                             for (Chunk chunk : world.getLoadedChunks()) {
                                 diffBlocks(chunk, SeaChange.DOWN);
                             }
+                            seaLevel.setCurrentLevel(customSeaLevel);
                             seaLevel.setChange(SeaChange.DOWN);
                         } else {
                             seaLevel.setChange(SeaChange.NONE);
