@@ -18,7 +18,7 @@ public class SerializableBlockChange implements Serializable {
     private String materialFrom;
     private String materialTo;
     private int x, y, z;
-    private String hashcode;
+    private int hashcode;
 
     public SerializableBlockChange(Block block, Material toType) {
         this.bukkitWorld = block.getWorld();
@@ -29,7 +29,7 @@ public class SerializableBlockChange implements Serializable {
         this.x = block.getX();
         this.y = block.getY();
         this.z = block.getZ();
-        this.hashcode = String.format("%d,%d,%d", x,y,z);
+        this.hashcode = blockLocation.hashCode();
     }
 
     public Material getFrom() {
@@ -38,10 +38,6 @@ public class SerializableBlockChange implements Serializable {
 
     public Material getTo() {
         return Material.valueOf(materialTo);
-    }
-
-    public String hash() {
-        return hashcode;
     }
 
     public World getBukkitWorld() {

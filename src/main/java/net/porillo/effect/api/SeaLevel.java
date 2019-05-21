@@ -13,7 +13,7 @@ import java.util.Map;
 @NoArgsConstructor
 public class SeaLevel implements Serializable {
 
-    private Map<String, SerializableBlockChange> locationHashChangeMap = new HashMap<>();
+    private Map<Integer, SerializableBlockChange> locationHashChangeMap = new HashMap<>();
     private Map<Integer, Integer> chunkSeaLevel = new HashMap<>();
 
     private Integer defaultLevel;

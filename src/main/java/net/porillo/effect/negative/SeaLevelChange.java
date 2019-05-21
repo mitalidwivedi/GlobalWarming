@@ -102,7 +102,8 @@ public class SeaLevelChange extends ListenerClimateEffect {
                         }
 
                         final int customSeaLevel = getCustomSeaLevel(wce);
-                        System.out.println("custom:" + customSeaLevel + " current:" + seaLevel.getCurrentLevel() + " default:" + seaLevel.getDefaultLevel());
+                        System.out.println("custom:" + customSeaLevel + " current:" +
+                                seaLevel.getCurrentLevel() + " default:" + seaLevel.getDefaultLevel());
 
                         if (customSeaLevel > seaLevel.getCurrentLevel()) {
                             for (Chunk chunk : world.getLoadedChunks()) {
@@ -155,7 +156,7 @@ public class SeaLevelChange extends ListenerClimateEffect {
                         fillTo(chunk, customSeaLevel, x, z, y);
                     } else if (block.getType() == ICE || block.getType() == PACKED_ICE) {
                         SerializableBlockChange sbc1 = new SerializableBlockChange(block, WATER);
-                        seaLevel.getLocationHashChangeMap().put(sbc1.hash(), sbc1);
+                        seaLevel.getLocationHashChangeMap().put(sbc1.getHashcode(), sbc1);
                         block.setType(WATER, true);
 
                         fillTo(chunk, customSeaLevel, x, z, y);
@@ -163,15 +164,15 @@ public class SeaLevelChange extends ListenerClimateEffect {
                 }
             }
         } else if (change == SeaChange.DOWN) {
-            Set<String> remove = new HashSet<>();
+            Set<Integer> remove = new HashSet<>();
             for (SerializableBlockChange sbc : seaLevel.getLocationHashChangeMap().values()) {
                 if (sbc.getY() > customSeaLevel) {
-                    remove.add(sbc.hash());
+                    remove.add(sbc.getHashcode());
                     sbc.getBukkitWorld().getBlockAt(sbc.getLocation()).setType(sbc.getFrom());
                 }
             }
 
-            for (String hash : remove) {
+            for (Integer hash : remove) {
                 seaLevel.getLocationHashChangeMap().remove(hash);
             }
         }
@@ -182,7 +183,7 @@ public class SeaLevelChange extends ListenerClimateEffect {
     private void fillTo(Chunk chunk, int customSeaLevel, int x, int z, int y) {
         for (int yy = y + 1; yy <= customSeaLevel; yy++) {
             SerializableBlockChange sbc = new SerializableBlockChange(chunk.getBlock(x, yy, z), WATER);
-            seaLevel.getLocationHashChangeMap().put(sbc.hash(), sbc);
+            seaLevel.getLocationHashChangeMap().put(sbc.getHashcode(), sbc);
             chunk.getBlock(x, yy, z).setType(WATER, true);
         }
         seaLevel.getChunkSeaLevel().put(chunk.hashCode(), customSeaLevel);
@@ -193,9 +194,7 @@ public class SeaLevelChange extends ListenerClimateEffect {
      */
     @EventHandler(ignoreCancelled = true)
     public void onBlockPlace(BlockPlaceEvent event) {
-        Block block = event.getBlockPlaced();
-        String hash = String.format("%d,%d,%d", block.getX(),block.getY(),block.getZ());
-        seaLevel.getLocationHashChangeMap().remove(hash);
+        seaLevel.getLocationHashChangeMap().remove(event.getBlockPlaced().getLocation().hashCode());
     }
 
     /**
@@ -205,8 +204,7 @@ public class SeaLevelChange extends ListenerClimateEffect {
     @EventHandler(ignoreCancelled = true)
     public void onPlayerBucketEmpty(PlayerBucketEmptyEvent event) {
         Block adjacent = event.getBlockClicked().getRelative(event.getBlockFace());
-        String hash = String.format("%d,%d,%d", adjacent.getX(),adjacent.getY(),adjacent.getZ());
-        seaLevel.getLocationHashChangeMap().remove(hash);
+        seaLevel.getLocationHashChangeMap().remove(adjacent.getLocation().hashCode());
     }
 
     /**
@@ -216,9 +214,8 @@ public class SeaLevelChange extends ListenerClimateEffect {
     @EventHandler(ignoreCancelled = true)
     public void onBlockFromToEvent(BlockFromToEvent event) {
         Block block = event.getBlock();
-        String hash = String.format("%d,%d,%d", block.getX(),block.getY(),block.getZ());
-        if (seaLevel.getLocationHashChangeMap().containsKey(hash)) {
-            seaLevel.getLocationHashChangeMap().put(hash,
+        if (seaLevel.getLocationHashChangeMap().containsKey(block.getLocation().hashCode())) {
+            seaLevel.getLocationHashChangeMap().put(block.getLocation().hashCode(),
                     new SerializableBlockChange(event.getToBlock(), event.getBlock().getType()));
         }
     }
