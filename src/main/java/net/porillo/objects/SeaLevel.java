@@ -20,4 +20,7 @@ public class SeaLevel implements Serializable {
     private Integer currentLevel;
     private transient SeaChange change;
 
+    public void debug() {
+        System.out.println(String.format("%d,%d", defaultLevel, currentLevel));
+    }
 }

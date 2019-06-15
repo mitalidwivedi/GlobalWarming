@@ -8,11 +8,11 @@ import net.porillo.effect.ClimateData;
 import net.porillo.effect.SeaChange;
 import net.porillo.effect.api.ClimateEffectType;
 import net.porillo.effect.api.ListenerClimateEffect;
-import net.porillo.objects.SeaLevel;
 import net.porillo.effect.api.change.SerializableBlockChange;
 import net.porillo.engine.ClimateEngine;
 import net.porillo.engine.api.Distribution;
 import net.porillo.engine.api.WorldClimateEngine;
+import net.porillo.objects.SeaLevel;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.World;
@@ -67,6 +67,7 @@ public class SeaLevelChange extends ListenerClimateEffect {
             FileInputStream fileIn = new FileInputStream("plugins/GlobalWarming/seaLevel.dat");
             ObjectInputStream in = new ObjectInputStream(fileIn);
             seaLevel = (SeaLevel) in.readObject();
+            seaLevel.debug();
             in.close();
             fileIn.close();
         } catch (IOException i) {
@@ -102,14 +103,13 @@ public class SeaLevelChange extends ListenerClimateEffect {
 
                         // Calculate the custom sea level based on the temperature. This is what we want.
                         final int customSeaLevel = getCustomSeaLevel(wce);
-                        System.out.println("custom:" + customSeaLevel + " current:" +
-                                seaLevel.getCurrentLevel() + " default:" + seaLevel.getDefaultLevel());
 
-                        // If
                         if (customSeaLevel > seaLevel.getCurrentLevel()) {
                             for (Chunk chunk : world.getLoadedChunks()) {
                                 diffBlocks(chunk, SeaChange.UP);
                             }
+                            System.out.println(String.format("%s, [ct:%d, cr:%d, def:%d]", "UP",
+                                    customSeaLevel, seaLevel.getCurrentLevel(), seaLevel.getDefaultLevel()));
 
                             seaLevel.setCurrentLevel(customSeaLevel);
                             seaLevel.setChange(SeaChange.UP);
@@ -117,6 +117,9 @@ public class SeaLevelChange extends ListenerClimateEffect {
                             for (Chunk chunk : world.getLoadedChunks()) {
                                 diffBlocks(chunk, SeaChange.DOWN);
                             }
+
+                            System.out.println(String.format("%s, [ct:%d, cr:%d, def:%d]", "DOWN",
+                                    customSeaLevel, seaLevel.getCurrentLevel(), seaLevel.getDefaultLevel()));
 
                             seaLevel.setCurrentLevel(customSeaLevel);
                             seaLevel.setChange(SeaChange.DOWN);
@@ -147,6 +150,7 @@ public class SeaLevelChange extends ListenerClimateEffect {
                     final int y = seaLevel.getDefaultLevel();
                     Block block = chunk.getBlock(x, y, z);
 
+                    // Test a block at sea level in the chunk, if needed we fill above this block
                     if (block.getType() == WATER || block.getType() == AIR) {
                         fillTo(chunk, customSeaLevel, x, z, y);
                     } else if (block.getType() == ICE || block.getType() == PACKED_ICE) {
@@ -202,16 +206,21 @@ public class SeaLevelChange extends ListenerClimateEffect {
         seaLevel.getLocationHashChangeMap().remove(adjacent.getLocation().hashCode());
     }
 
-    /**
-     * Only allow sea-level blocks to flow if they are below the custom sea-level
-     * - Track any new blocks originating from sea-level blocks
-     */
     @EventHandler(ignoreCancelled = true)
     public void onBlockFromToEvent(BlockFromToEvent event) {
         Block block = event.getBlock();
-        if (seaLevel.getLocationHashChangeMap().containsKey(block.getLocation().hashCode())) {
-            seaLevel.getLocationHashChangeMap().put(block.getLocation().hashCode(),
-                    new SerializableBlockChange(event.getToBlock(), event.getBlock().getType()));
+        if (event.getToBlock().getType() == WATER) {
+            World world = event.getBlock().getWorld();
+            WorldClimateEngine wce = ClimateEngine.getInstance().getClimateEngine(world.getUID());
+
+            if (wce != null && wce.isEffectEnabled(ClimateEffectType.SEA_LEVEL_RISE)) {
+                if (seaLevel.getChange() == SeaChange.UP) {
+                    seaLevel.getLocationHashChangeMap().put(block.getLocation().hashCode(),
+                            new SerializableBlockChange(event.getToBlock(), event.getBlock().getType()));
+                } else if(seaLevel.getChange() == SeaChange.DOWN) {
+                    event.setCancelled(true);
+                }
+            }
         }
     }
 
