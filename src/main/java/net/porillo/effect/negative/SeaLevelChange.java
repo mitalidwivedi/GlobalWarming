@@ -15,6 +15,7 @@ import net.porillo.engine.api.WorldClimateEngine;
 import net.porillo.objects.SeaLevel;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
+import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.event.EventHandler;
@@ -47,6 +48,8 @@ public class SeaLevelChange extends ListenerClimateEffect {
     @Getter private Distribution seaMap;
     private int queueTicks;
     private SeaLevel seaLevel;
+    private Set<Location> trackedBucketEmpties = new HashSet<>();
+    private long lastChange;
 
     @Override
     public void serialize() {
@@ -54,8 +57,10 @@ public class SeaLevelChange extends ListenerClimateEffect {
             FileOutputStream fileOut = new FileOutputStream("plugins/GlobalWarming/seaLevel.dat");
             ObjectOutputStream out = new ObjectOutputStream(fileOut);
             out.writeObject(seaLevel);
+            out.flush();
             out.close();
             fileOut.close();
+            GlobalWarming.getInstance().getLogger().info("Serialized sea level data to file.");
         } catch (IOException i) {
             i.printStackTrace();
         }
@@ -104,28 +109,26 @@ public class SeaLevelChange extends ListenerClimateEffect {
                         // Calculate the custom sea level based on the temperature. This is what we want.
                         final int customSeaLevel = getCustomSeaLevel(wce);
 
-                        if (customSeaLevel > seaLevel.getCurrentLevel()) {
-                            for (Chunk chunk : world.getLoadedChunks()) {
-                                diffBlocks(chunk, SeaChange.UP);
-                            }
-                            System.out.println(String.format("%s, [ct:%d, cr:%d, def:%d]", "UP",
-                                    customSeaLevel, seaLevel.getCurrentLevel(), seaLevel.getDefaultLevel()));
+                        for (Chunk chunk : world.getLoadedChunks()) {
+                            int chunkSeaLevel = seaLevel.getDefaultLevel();
+                            int chunkHash = SeaLevel.hashChunk(chunk);
 
-                            seaLevel.setCurrentLevel(customSeaLevel);
-                            seaLevel.setChange(SeaChange.UP);
-                        } else if (customSeaLevel < seaLevel.getCurrentLevel()) {
-                            for (Chunk chunk : world.getLoadedChunks()) {
-                                diffBlocks(chunk, SeaChange.DOWN);
+                            if (seaLevel.getChunkSeaLevel().containsKey(chunkHash)) {
+                                chunkSeaLevel = seaLevel.getChunkSeaLevel().get(chunkHash);
                             }
 
-                            System.out.println(String.format("%s, [ct:%d, cr:%d, def:%d]", "DOWN",
-                                    customSeaLevel, seaLevel.getCurrentLevel(), seaLevel.getDefaultLevel()));
+                            if (customSeaLevel > chunkSeaLevel) {
+                                diffBlocks(chunk, customSeaLevel, SeaChange.UP);
+                            } else if (customSeaLevel < chunkSeaLevel) {
+                                diffBlocks(chunk, customSeaLevel, SeaChange.DOWN);
+                            }
 
-                            seaLevel.setCurrentLevel(customSeaLevel);
-                            seaLevel.setChange(SeaChange.DOWN);
-                        } else {
-                            seaLevel.setChange(SeaChange.NONE);
+                            seaLevel.getChunkSeaLevel().put(SeaLevel.hashChunk(chunk), customSeaLevel);
                         }
+
+                        seaLevel.setCurrentLevel(customSeaLevel);
+                        lastChange = System.currentTimeMillis();
+
                     }
                 }
             }
@@ -137,12 +140,8 @@ public class SeaLevelChange extends ListenerClimateEffect {
         return seaLevel.getDefaultLevel() + deltaSeaLevel;
     }
 
-
-    private void diffBlocks(Chunk chunk, SeaChange change) {
-        World world = chunk.getWorld();
-        WorldClimateEngine climateEngine = ClimateEngine.getInstance().getClimateEngine(world.getUID());
-        final int customSeaLevel = getCustomSeaLevel(climateEngine);
-
+    private void diffBlocks(Chunk chunk, final int customSeaLevel, SeaChange change) {
+        System.out.println(String.format("[%d,%d] - %d - {%s}", chunk.getX(), chunk.getZ(), customSeaLevel, change.name()));
         if (change == SeaChange.UP) {
             //Scan chunk-blocks within the sea-level's range:
             for (int x = 0; x < 16; x++) {
@@ -151,7 +150,8 @@ public class SeaLevelChange extends ListenerClimateEffect {
                     Block block = chunk.getBlock(x, y, z);
 
                     // Test a block at sea level in the chunk, if needed we fill above this block
-                    if (block.getType() == WATER || block.getType() == AIR) {
+                    if (block.getType() == WATER || block.getType() == GRASS || block.getType() == SAND
+                            | block.getType() == GRASS_BLOCK || block.getType() == SEAGRASS) {
                         fillTo(chunk, customSeaLevel, x, z, y);
                     } else if (block.getType() == ICE || block.getType() == PACKED_ICE) {
                         SerializableBlockChange sbc1 = new SerializableBlockChange(block, WATER);
@@ -175,17 +175,35 @@ public class SeaLevelChange extends ListenerClimateEffect {
                 seaLevel.getLocationHashChangeMap().remove(hash);
             }
         }
-
-        System.out.println(String.format("[%d,%d] {%s:%d}", chunk.getX(), chunk.getZ(), change.name(), seaLevel.getLocationHashChangeMap().size()));
     }
 
     private void fillTo(Chunk chunk, int customSeaLevel, int x, int z, int y) {
         for (int yy = y + 1; yy <= customSeaLevel; yy++) {
-            SerializableBlockChange sbc = new SerializableBlockChange(chunk.getBlock(x, yy, z), WATER);
-            seaLevel.getLocationHashChangeMap().put(sbc.getHashcode(), sbc);
-            chunk.getBlock(x, yy, z).setType(WATER, true);
+            Block block = chunk.getBlock(x, yy, z);
+
+            if (block.getType() == AIR || block.getType() == LILY_PAD || block.getType() == SEAGRASS) {
+                SerializableBlockChange sbc = new SerializableBlockChange(block, WATER);
+                seaLevel.getLocationHashChangeMap().put(sbc.getHashcode(), sbc);
+                chunk.getBlock(x, yy, z).setType(WATER, true);
+            }
         }
-        seaLevel.getChunkSeaLevel().put(chunk.hashCode(), customSeaLevel);
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onBlockFromToEvent(BlockFromToEvent event) {
+        Block source = event.getBlock();
+
+        if (source.getType() == WATER && !trackedBucketEmpties.contains(source.getLocation())) {
+            Block to = event.getToBlock();
+            long now = System.currentTimeMillis();
+
+            if (now - lastChange <= 60000) {
+                event.setCancelled(true);
+            } else if (seaLevel.getLocationHashChangeMap().containsKey(source.getLocation().hashCode())) {
+                seaLevel.getLocationHashChangeMap().put(to.getLocation().hashCode(),
+                        new SerializableBlockChange(to, WATER));
+            }
+        }
     }
 
     /**
@@ -204,24 +222,7 @@ public class SeaLevelChange extends ListenerClimateEffect {
     public void onPlayerBucketEmpty(PlayerBucketEmptyEvent event) {
         Block adjacent = event.getBlockClicked().getRelative(event.getBlockFace());
         seaLevel.getLocationHashChangeMap().remove(adjacent.getLocation().hashCode());
-    }
-
-    @EventHandler(ignoreCancelled = true)
-    public void onBlockFromToEvent(BlockFromToEvent event) {
-        Block block = event.getBlock();
-        if (event.getToBlock().getType() == WATER) {
-            World world = event.getBlock().getWorld();
-            WorldClimateEngine wce = ClimateEngine.getInstance().getClimateEngine(world.getUID());
-
-            if (wce != null && wce.isEffectEnabled(ClimateEffectType.SEA_LEVEL_RISE)) {
-                if (seaLevel.getChange() == SeaChange.UP) {
-                    seaLevel.getLocationHashChangeMap().put(block.getLocation().hashCode(),
-                            new SerializableBlockChange(event.getToBlock(), event.getBlock().getType()));
-                } else if(seaLevel.getChange() == SeaChange.DOWN) {
-                    event.setCancelled(true);
-                }
-            }
-        }
+        trackedBucketEmpties.add(adjacent.getLocation());
     }
 
     /**
