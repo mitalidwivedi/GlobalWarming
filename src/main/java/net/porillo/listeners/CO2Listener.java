@@ -18,13 +18,18 @@ import net.porillo.objects.*;
 import net.porillo.util.AlertManager;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.FurnaceBurnEvent;
 import org.bukkit.event.inventory.InventoryMoveItemEvent;
 import org.bukkit.event.world.StructureGrowEvent;
 import org.bukkit.inventory.FurnaceInventory;
+import org.bukkit.inventory.InventoryHolder;
+import org.bukkit.inventory.ItemStack;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 public class CO2Listener implements Listener {
@@ -32,8 +37,64 @@ public class CO2Listener implements Listener {
     private GlobalWarming gw;
     private static final UUID untrackedUUID = UUID.fromString("1-1-1-1-1");
 
+    private Map<GLocation, Map<Material, Map<UUID, Integer>>> furnaceFuelMap = new HashMap<>();
+
     public CO2Listener(GlobalWarming main) {
         this.gw = main;
+    }
+
+    @EventHandler
+    public void onFurnaceInteract(InventoryMoveItemEvent event) {
+        InventoryHolder initHolder = event.getInitiator().getHolder();
+        InventoryHolder destHolder = event.getDestination().getHolder();
+        ItemStack item = event.getItem();
+
+        if (!item.getType().isFuel()) {
+            return;
+        }
+
+        if (initHolder instanceof Player && destHolder instanceof org.bukkit.block.Furnace) {
+            // Player moves fuel into a Furnace
+            Player player = (Player) initHolder;
+            Furnace furnace = (Furnace) destHolder;
+
+
+            if (!ClimateEngine.getInstance().isClimateEngineEnabled(player.getWorld().getUID())) {
+                return;
+            }
+
+            FurnaceTable furnaceTable = GlobalWarming.getInstance().getTableManager().getFurnaceTable();
+            GLocation location = new GLocation(furnace.getLocation());
+
+            if (furnaceFuelMap.containsKey(location)) {
+                Map<Material, Map<UUID, Integer>> fuelMap = furnaceFuelMap.get(location);
+                if (fuelMap.containsKey(item.getType())) {
+                    Map<UUID, Integer> playerMap = fuelMap.get(item.getType());
+                    playerMap.put(player.getUniqueId(), item.getAmount());
+                    fuelMap.put(item.getType(), playerMap);
+                    furnaceFuelMap.put(location, fuelMap);
+                } else {
+                    Map<UUID, Integer> playerMap = new HashMap<>();
+                    playerMap.put(player.getUniqueId(), item.getAmount());
+                    fuelMap.put(item.getType(), playerMap);
+                    furnaceFuelMap.put(location, fuelMap);
+                }
+            } else {
+                // Furnace is tracked
+                if (furnaceTable.getLocationMap().containsKey(furnace.getLocation())) {
+
+                }
+                Map<Material, Map<UUID, Integer>> fuelMap = new HashMap<>();
+                Map<UUID, Integer> playerMap = new HashMap<>();
+                playerMap.put(player.getUniqueId(), item.getAmount());
+                fuelMap.put(item.getType(), playerMap);
+                furnaceFuelMap.put(location, fuelMap);
+            }
+
+
+        } else if (initHolder instanceof org.bukkit.block.Furnace && destHolder instanceof Player) {
+            // Player moves fuel out of a furnace
+        }
     }
 
     /**
@@ -139,6 +200,7 @@ public class CO2Listener implements Listener {
 
     /**
      * Detect when CO2 is absorbed via new tree
+     *
      * @param event structure grow event (tree grow)
      */
     @EventHandler(ignoreCancelled = true)
