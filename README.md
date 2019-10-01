@@ -9,18 +9,18 @@ Minecraft Server Java Edition (Spigot) plugin which adds game changing climate c
 - Pull requests welcome! This is a very new project and I appreciate contributions.
 
 ## Builds
-- <strike><a href="http://jenkins.porillo.net/job/GlobalWarming/">Snapshots on <img src="https://i.imgur.com/3FtNxcM.png" height="30"></a></strike> 
-- Jenkins was exploited with RCE, currently down for maintenence.
+- <strike><a href="http://jenkins.porillo.net/job/GlobalWarming/">Snapshots on <img src="https://i.imgur.com/3FtNxcM.png" height="30"></a></strike> maintenance.
+- Jenkins was exploited with RCE, currently down for 
 
 ## Overview
-+ Adds the concept of greenhouse gases (CO2) in the worlds atmosphere 
++ Adds the concept of greenhouse gases (CO2) in the world's atmosphere 
 + Furnaces emit CO2 when players smelt items
 + Farmed Animals emit CH4 when they are killed
 + Trees (instantly) absorb CO2 when they grow from a sapling
 + As CO2 levels rise, global temperature rises because of the [Greenhouse Effect](http://hyperphysics.phy-astr.gsu.edu/hbase/thermo/grnhse.html)
 
 ## Purpose
-+ Ever had the hankering to turn a game meant for fun into a emulator of one of the modern worlds toughest challenges?
++ Ever had the hankering to turn a game meant for fun into an emulator of one of the modern world's toughest challenges?
 + Observe the [Prisoner's Dilemma](https://en.wikipedia.org/wiki/Prisoner%27s_dilemma#In_environmental_studies) first hand! 
 + Players are best off when they co-operate and agree to reduce their emissions
 + However, each individual player typically believes they are better off for themselves to emit as much as they wish. 
